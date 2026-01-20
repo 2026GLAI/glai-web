@@ -2,9 +2,9 @@ import { useState } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export default function App() {
-  const [input, setInput] = useState("");
+function App() {
   const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function sendMessage() {
@@ -18,29 +18,30 @@ export default function App() {
     setLoading(true);
 
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Accept-Language": navigator.language || "en"
         },
         body: JSON.stringify({
           messages: nextMessages
         })
       });
 
-      if (!res.ok) throw new Error("Backend error");
+      if (!res.ok) {
+        throw new Error("Bad response");
+      }
 
       const data = await res.json();
 
-      const assistantMessage = {
-        role: "assistant",
-        content: data.reply || "No response"
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages([
+        ...nextMessages,
+        { role: "assistant", content: data.reply }
+      ]);
     } catch (err) {
-      setMessages(prev => [
-        ...prev,
+      setMessages([
+        ...nextMessages,
         { role: "assistant", content: "Connection error" }
       ]);
     } finally {
@@ -53,7 +54,7 @@ export default function App() {
       style={{
         maxWidth: 600,
         margin: "40px auto",
-        fontFamily: "system-ui, sans-serif"
+        fontFamily: "system-ui, -apple-system, sans-serif"
       }}
     >
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
@@ -73,6 +74,7 @@ export default function App() {
             {m.content}
           </div>
         ))}
+
         {loading && <em>GLAI is thinking…</em>}
       </div>
 
@@ -80,8 +82,8 @@ export default function App() {
         <input
           style={{ flex: 1, padding: 8 }}
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && sendMessage()}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Type a message"
         />
         <button onClick={sendMessage}>Send</button>
@@ -89,3 +91,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
