@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_URL = "https://glai-core-production.up.railway.app/chat";
+const API_BASE = import.meta.env.VITE_API_URL;
 
 export default function App() {
   const [input, setInput] = useState("");
@@ -8,7 +8,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   async function sendMessage() {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const userMessage = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
@@ -16,32 +16,29 @@ export default function App() {
     setLoading(true);
 
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Accept-Language": navigator.language || "en",
         },
-        body: JSON.stringify({
-          message: input
-        })
+        body: JSON.stringify({ message: userMessage.content }),
       });
 
-      if (!res.ok) {
-        throw new Error("Backend error");
-      }
+      if (!res.ok) throw new Error("Backend error");
 
       const data = await res.json();
 
       const aiMessage = {
         role: "assistant",
-        content: data.reply || data.message || "No response"
+        content: data.reply || "No response",
       };
 
       setMessages((prev) => [...prev, aiMessage]);
-    } catch (err) {
+    } catch (e) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Error connecting to backend" }
+        { role: "assistant", content: "Error connecting to backend" },
       ]);
     } finally {
       setLoading(false);
@@ -49,7 +46,13 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "sans-serif" }}>
+    <div
+      style={{
+        maxWidth: 600,
+        margin: "40px auto",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
 
       <div
@@ -58,7 +61,7 @@ export default function App() {
           padding: 16,
           minHeight: 300,
           marginBottom: 12,
-          overflowY: "auto"
+          overflowY: "auto",
         }}
       >
         {messages.map((m, i) => (
@@ -67,7 +70,7 @@ export default function App() {
             {m.content}
           </div>
         ))}
-        {loading && <div><em>GLAI is thinking…</em></div>}
+        {loading && <em>GLAI is thinking…</em>}
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
@@ -78,7 +81,9 @@ export default function App() {
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Type a message"
         />
-        <button onClick={sendMessage}>Send</button>
+        <button onClick={sendMessage} disabled={loading}>
+          Send
+        </button>
       </div>
     </div>
   );
