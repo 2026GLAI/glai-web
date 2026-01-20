@@ -1,0 +1,12 @@
+# GLAI Web
+
+Frontend for GLAI — an AI assistant focused on Greece.
+
+## Stack
+- Vite
+- React
+
+## Development
+```bash
+npm install
+npm run dev
