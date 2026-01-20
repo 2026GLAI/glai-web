@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function App() {
   const [input, setInput] = useState("");
@@ -11,34 +11,37 @@ export default function App() {
     if (!input.trim() || loading) return;
 
     const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/chat`, {
+      const res = await fetch(API_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Accept-Language": navigator.language || "en",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ message: userMessage.content }),
+        body: JSON.stringify({
+          messages: nextMessages
+        })
       });
 
       if (!res.ok) throw new Error("Backend error");
 
       const data = await res.json();
 
-      const aiMessage = {
+      const assistantMessage = {
         role: "assistant",
-        content: data.reply || "No response",
+        content: data.reply || "No response"
       };
 
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (e) {
-      setMessages((prev) => [
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err) {
+      setMessages(prev => [
         ...prev,
-        { role: "assistant", content: "Error connecting to backend" },
+        { role: "assistant", content: "Connection error" }
       ]);
     } finally {
       setLoading(false);
@@ -50,7 +53,7 @@ export default function App() {
       style={{
         maxWidth: 600,
         margin: "40px auto",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontFamily: "system-ui, sans-serif"
       }}
     >
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
@@ -61,7 +64,7 @@ export default function App() {
           padding: 16,
           minHeight: 300,
           marginBottom: 12,
-          overflowY: "auto",
+          overflowY: "auto"
         }}
       >
         {messages.map((m, i) => (
@@ -77,13 +80,11 @@ export default function App() {
         <input
           style={{ flex: 1, padding: 8 }}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendMessage()}
           placeholder="Type a message"
         />
-        <button onClick={sendMessage} disabled={loading}>
-          Send
-        </button>
+        <button onClick={sendMessage}>Send</button>
       </div>
     </div>
   );
