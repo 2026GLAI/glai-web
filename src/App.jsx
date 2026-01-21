@@ -7,15 +7,12 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const sendMessage = async () => {
+  async function sendMessage() {
     if (!input.trim() || loading) return;
 
-    const nextMessages = [
-      ...messages,
-      { role: "user", content: input }
-    ];
+    const userMessage = { role: "user", content: input };
 
-    setMessages(nextMessages);
+    setMessages(prev => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
@@ -24,35 +21,41 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept-Language": "ru"
+          "Accept-Language": navigator.language || "en"
         },
         body: JSON.stringify({
-          messages: nextMessages
+          messages: [...messages, userMessage]
         })
       });
 
       if (!res.ok) {
-        throw new Error("HTTP error");
+        throw new Error(`HTTP ${res.status}`);
       }
 
       const data = await res.json();
 
-      setMessages((prev) => [
+      // 🔒 ЖЁСТКАЯ ПРОВЕРКА
+      if (!data || typeof data.reply !== "string") {
+        throw new Error("Invalid API response");
+      }
+
+      setMessages(prev => [
         ...prev,
-        data.reply
+        { role: "assistant", content: data.reply }
       ]);
-    } catch (e) {
-      setMessages((prev) => [
+
+    } catch (err) {
+      setMessages(prev => [
         ...prev,
         { role: "assistant", content: "Connection error" }
       ]);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui" }}>
+    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui, sans-serif" }}>
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
 
       <div style={{
@@ -68,6 +71,7 @@ export default function App() {
             {m.content}
           </div>
         ))}
+
         {loading && <em>GLAI is thinking…</em>}
       </div>
 
@@ -75,8 +79,8 @@ export default function App() {
         <input
           style={{ flex: 1, padding: 8 }}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendMessage()}
           placeholder="Type a message"
         />
         <button onClick={sendMessage}>Send</button>
