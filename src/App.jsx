@@ -2,17 +2,20 @@ import { useState } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-function App() {
+export default function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function sendMessage() {
-    if (!input.trim() || loading) return;
+    const text = input.trim();
+    if (!text || loading) return;
 
-    const userMessage = { role: "user", content: input };
+    const nextMessages = [
+      ...messages,
+      { role: "user", content: text }
+    ];
 
-    const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
     setInput("");
     setLoading(true);
@@ -30,10 +33,14 @@ function App() {
       });
 
       if (!res.ok) {
-        throw new Error("Bad response");
+        throw new Error(`HTTP ${res.status}`);
       }
 
       const data = await res.json();
+
+      if (!data.reply) {
+        throw new Error("Invalid API response");
+      }
 
       setMessages([
         ...nextMessages,
@@ -42,7 +49,10 @@ function App() {
     } catch (err) {
       setMessages([
         ...nextMessages,
-        { role: "assistant", content: "Connection error" }
+        {
+          role: "assistant",
+          content: "Connection error"
+        }
       ]);
     } finally {
       setLoading(false);
@@ -86,10 +96,10 @@ function App() {
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Type a message"
         />
-        <button onClick={sendMessage}>Send</button>
+        <button onClick={sendMessage} disabled={loading}>
+          Send
+        </button>
       </div>
     </div>
   );
 }
-
-export default App;
