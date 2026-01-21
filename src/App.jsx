@@ -7,13 +7,12 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function sendMessage() {
-    const text = input.trim();
-    if (!text || loading) return;
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
 
     const nextMessages = [
       ...messages,
-      { role: "user", content: text }
+      { role: "user", content: input }
     ];
 
     setMessages(nextMessages);
@@ -25,7 +24,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept-Language": navigator.language || "en"
+          "Accept-Language": "ru"
         },
         body: JSON.stringify({
           messages: nextMessages
@@ -33,58 +32,42 @@ export default function App() {
       });
 
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        throw new Error("HTTP error");
       }
 
       const data = await res.json();
 
-      if (!data.reply) {
-        throw new Error("Invalid API response");
-      }
-
-      setMessages([
-        ...nextMessages,
-        { role: "assistant", content: data.reply }
+      setMessages((prev) => [
+        ...prev,
+        data.reply
       ]);
-    } catch (err) {
-      setMessages([
-        ...nextMessages,
-        {
-          role: "assistant",
-          content: "Connection error"
-        }
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Connection error" }
       ]);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div
-      style={{
-        maxWidth: 600,
-        margin: "40px auto",
-        fontFamily: "system-ui, -apple-system, sans-serif"
-      }}
-    >
+    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui" }}>
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
 
-      <div
-        style={{
-          border: "1px solid #ccc",
-          padding: 16,
-          minHeight: 300,
-          marginBottom: 12,
-          overflowY: "auto"
-        }}
-      >
+      <div style={{
+        border: "1px solid #ccc",
+        padding: 16,
+        minHeight: 300,
+        marginBottom: 12,
+        overflowY: "auto"
+      }}>
         {messages.map((m, i) => (
           <div key={i} style={{ marginBottom: 8 }}>
             <strong>{m.role === "user" ? "You" : "GLAI"}:</strong>{" "}
             {m.content}
           </div>
         ))}
-
         {loading && <em>GLAI is thinking…</em>}
       </div>
 
@@ -96,9 +79,7 @@ export default function App() {
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Type a message"
         />
-        <button onClick={sendMessage} disabled={loading}>
-          Send
-        </button>
+        <button onClick={sendMessage}>Send</button>
       </div>
     </div>
   );
