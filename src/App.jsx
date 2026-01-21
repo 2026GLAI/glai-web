@@ -7,12 +7,14 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function sendMessage() {
-    if (!input.trim() || loading) return;
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
 
-    const userMessage = { role: "user", content: input };
+    const userMessage = { role: "user", content: text };
 
-    setMessages(prev => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setInput("");
     setLoading(true);
 
@@ -21,56 +23,56 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept-Language": navigator.language || "en"
+          "Accept-Language": navigator.language
         },
-        body: JSON.stringify({
-          messages: [...messages, userMessage]
-        })
+        body: JSON.stringify({ messages: nextMessages })
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error("bad response");
 
       const data = await res.json();
 
-      // 🔒 ЖЁСТКАЯ ПРОВЕРКА
-      if (!data || typeof data.reply !== "string") {
-        throw new Error("Invalid API response");
-      }
-
       setMessages(prev => [
         ...prev,
-        { role: "assistant", content: data.reply }
+        {
+          role: "assistant",
+          content: data.reply || "Empty reply"
+        }
       ]);
-
-    } catch (err) {
+    } catch {
       setMessages(prev => [
         ...prev,
-        { role: "assistant", content: "Connection error" }
+        {
+          role: "assistant",
+          content: "Connection error"
+        }
       ]);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui, sans-serif" }}>
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
 
-      <div style={{
-        border: "1px solid #ccc",
-        padding: 16,
-        minHeight: 300,
-        marginBottom: 12,
-        overflowY: "auto"
-      }}>
-        {messages.map((m, i) => (
-          <div key={i} style={{ marginBottom: 8 }}>
-            <strong>{m.role === "user" ? "You" : "GLAI"}:</strong>{" "}
-            {m.content}
-          </div>
-        ))}
+      <div
+        style={{
+          border: "1px solid #ccc",
+          padding: 16,
+          minHeight: 300,
+          marginBottom: 12,
+          overflowY: "auto"
+        }}
+      >
+        {messages
+          .filter(m => m && m.role && m.content)
+          .map((m, i) => (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <strong>{m.role === "user" ? "You" : "GLAI"}:</strong>{" "}
+              {m.content}
+            </div>
+          ))}
 
         {loading && <em>GLAI is thinking…</em>}
       </div>
