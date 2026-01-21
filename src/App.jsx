@@ -7,13 +7,12 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  async function sendMessage() {
+    const text = input.trim();
+    if (!text || loading) return;
 
-    const nextMessages = [
-      ...messages,
-      { role: "user", content: input }
-    ];
+    const userMessage = { role: "user", content: text };
+    const nextMessages = [...messages, userMessage];
 
     setMessages(nextMessages);
     setInput("");
@@ -22,17 +21,25 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": navigator.language || "en"
+        },
         body: JSON.stringify({ messages: nextMessages })
       });
 
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const data = await res.json();
 
-      if (data?.role && data?.content) {
-        setMessages(prev => [...prev, data]);
-      } else {
-        throw new Error("Invalid response");
+      // контракт backend: { role, content }
+      if (!data || data.role !== "assistant" || typeof data.content !== "string") {
+        throw new Error("Invalid API response");
       }
+
+      setMessages(prev => [...prev, data]);
     } catch {
       setMessages(prev => [
         ...prev,
@@ -41,10 +48,10 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui" }}>
+    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui, sans-serif" }}>
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
 
       <div
@@ -62,6 +69,7 @@ export default function App() {
             {m.content}
           </div>
         ))}
+
         {loading && <em>GLAI is thinking…</em>}
       </div>
 
@@ -73,7 +81,9 @@ export default function App() {
           onKeyDown={e => e.key === "Enter" && sendMessage()}
           placeholder="Type a message"
         />
-        <button onClick={sendMessage}>Send</button>
+        <button onClick={sendMessage} disabled={loading}>
+          Send
+        </button>
       </div>
     </div>
   );
