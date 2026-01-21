@@ -8,12 +8,13 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+    if (!input.trim()) return;
 
-    const userMessage = { role: "user", content: text };
+    const nextMessages = [
+      ...messages,
+      { role: "user", content: input }
+    ];
 
-    const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
     setInput("");
     setLoading(true);
@@ -21,31 +22,21 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept-Language": navigator.language
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: nextMessages })
       });
 
-      if (!res.ok) throw new Error("bad response");
-
       const data = await res.json();
 
-      setMessages(prev => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.reply || "Empty reply"
-        }
-      ]);
+      if (data?.role && data?.content) {
+        setMessages(prev => [...prev, data]);
+      } else {
+        throw new Error("Invalid response");
+      }
     } catch {
       setMessages(prev => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Connection error"
-        }
+        { role: "assistant", content: "Connection error" }
       ]);
     } finally {
       setLoading(false);
@@ -53,7 +44,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "system-ui" }}>
       <h1 style={{ textAlign: "center" }}>GLAI</h1>
 
       <div
@@ -65,15 +56,12 @@ export default function App() {
           overflowY: "auto"
         }}
       >
-        {messages
-          .filter(m => m && m.role && m.content)
-          .map((m, i) => (
-            <div key={i} style={{ marginBottom: 8 }}>
-              <strong>{m.role === "user" ? "You" : "GLAI"}:</strong>{" "}
-              {m.content}
-            </div>
-          ))}
-
+        {messages.map((m, i) => (
+          <div key={i} style={{ marginBottom: 8 }}>
+            <strong>{m.role === "user" ? "You" : "GLAI"}:</strong>{" "}
+            {m.content}
+          </div>
+        ))}
         {loading && <em>GLAI is thinking…</em>}
       </div>
 
